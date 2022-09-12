@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creating lambda Function"
+Parameters:
+  Function1:
+    Type: String
+    Description: Entre the first lambda fumction name
+    Default: Function1
+  Function2:  
+    Type: String
+    Description: Entre the first lambda fumction name
+    Default: Function1
+
+  

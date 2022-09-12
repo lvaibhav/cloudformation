@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creating Roles for EC2 And lambda"
+Parameters:
+  EC2RoleName:
+    Description: Enter the name for EC2 role
+    Default: EC2role
+    Type: String
+  LambdaRoleName:
+    Description: Enter the name for Lambda role
+    Default: LambdaRole
+    Type: String   
+
+Resources:
+  MyEC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties: 
+      RoleName: !Ref EC2RoleName
+      Description: IAM role for EC2 instance
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+          - 
+            Effect: Allow
+            Principal: 
+              Service: 
+                - 'ec2.amazonaws.com'
+            Action: 
+              - 'sts:AssumeRole'
+      Path: '/'
+      Policies: 
+        - PolicyName: inlineS3ReadOnlyPolicy 
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: Allow
+                Action:
+                  - 's3:Get*'
+                  - 's3:List*'
+                Resource: '*'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+    
+  MyInstanceProfile: 
+    Type: 'AWS::IAM::InstanceProfile'
+    DependsOn: MyEC2Role
+    Properties: 
+      InstanceProfileName: instanceProfileA
+      Roles:
+        - EC2Role
+      Path: '/'
+
+  MyLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref LambdaRoleName
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/'
+      Policies: 
+
+  ApiGatewayIamRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: ''
+          Effect: 'Allow'
+          Principal:
+            Service:
+              - 'apigateway.amazonaws.com'
+          Action:
+            - 'sts:AssumeRole'
+    Path: '/'
+    Policies:
+      - PolicyName: LambdaAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action: 'lambda:*'
+              Resource: '*'
+
+
+Outputs:
+  InstanceProfileName:
+    Description: InstanceProfileName
+    Value: !Ref MyInstanceProfile
+    Export: 
+      Name: InstanceProfileName
+  
+  LambdaRoleArn:
+    Description: Exporting lambda Arn
+    Value: !GetAtt MyLambdaRole.Arn
+    Export:
+      Name: LambdaRoleArn
+
+    
+    

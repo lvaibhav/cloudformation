@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creating ApiGateway"
+Parameters:
+  apiName:
+    Type: String
+    Default: MyTestApi
+
+  lambdaArn1:
+    Type: String
+    Description: entre the first lambda arn
+    Default: arn:aws:lambda:ap-south-1:648354053867:function:myfinc 
+
+  lambdaArn2:
+    Type: String
+    Description: entre the second lambda arn
+    Default: arn:aws:lambda:ap-south-1:648354053867:function:myfunc2
+  
+Resources:
+  MyRestAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Ref apiName
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt MyRestAPI.RootResourceId
+      PathPart: 'demo'
+      RestApiId: !Ref MyRestAPI 
+
+  ApiGatewayResource1:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt MyRestAPI.RootResourceId
+      PathPart: 'demo1'
+      RestApiId: !Ref MyRestAPI 
+
+  ApiGatewayMethod1:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        IntegrationHttpMethod: GET
+        Type: AWS_PROXY
+        Uri: !Sub 
+          - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations'
+          - LambdaArn: !Ref lambdaArn1
+      OperationName: 'lambda'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref MyRestAPI
+    
+  ApiGatewayMethod2:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations'
+          - LambdaArn: !Ref lambdaArn2
+      OperationName: 'lambda'
+      ResourceId: !Ref ApiGatewayResource1
+      RestApiId: !Ref MyRestAPI
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod1
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId: !Ref MyRestAPI
+
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      Description: Lambda API Stage v0
+      RestApiId: !Ref MyRestAPI
+

@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creating ALB using security group as input from other stack, listeners and listener rules"
+Parameters:
+    SubnetId1:
+        Description: Select first Subnet ID.
+        Type: AWS::EC2::Subnet::Id
+        Default: subnet-09c8045f8288934d5
+    SubnetId2:
+        Description: Select second Subnet ID.
+        Type: AWS::EC2::Subnet::Id
+        Default: subnet-05c451916e6e3a1ab
+
+Resources: 
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: 
+            Fn::ImportValue: !Sub TargetGroupArn
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Name: myalb
+      Subnets:
+      - !Ref SubnetId1
+      - !Ref SubnetId2
+      SecurityGroups:
+        - Fn::ImportValue: !Sub SecurtyGroupId

@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+    VpcId:
+        Description: Select VPC ID
+        Type: AWS::EC2::VPC::Id
+        Default: vpc-0c37db0802fa18e10
+    InstanceType:
+        Description: Select Instance Type.
+        Type: String
+        Default: t2.micro
+        AllowedValues: 
+        - t2.medium
+        - t2.micro
+        - t2.nano
+        - t2.small
+        - t2.xlarge
+    KeyName:
+      Description: Enter Name of pem key.
+      Type: String
+      Default: mykey
+Resources:
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Web server
+      GroupName: web     
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          
+  MyEC2:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: WebSecurityGroup
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-06489866022e12a14
+      IamInstanceProfile: 
+        Fn::ImportValue: !Sub InstanceProfileName
+      KeyName: mykey
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup
+
+  EC2TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: MyEC2
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: '200'
+      Name: EC2TargetGroup
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '20'
+      Targets:
+      - Id: !Ref MyEC2
+        Port: 80
+      UnhealthyThresholdCount: 3
+      VpcId: !Ref VpcId
+
+        
+Outputs:
+  SecurityGroupId:
+    Description: Exporting securtiy group ID
+    Value: !GetAtt WebSecurityGroup.GroupId
+    Export:
+      Name: SecurtyGroupId
+
+  TargetGroupArn:
+    Description: Exporting Target Group ARN 
+    Value: !Ref EC2TargetGroup
+    Export: 
+      Name: TargetGroupArn
+
